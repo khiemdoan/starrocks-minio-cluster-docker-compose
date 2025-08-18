@@ -40,9 +40,9 @@ x-frontend-common: &frontend-common
       condition: service_healthy
 
 x-backend-common: &backend-common
-  image: starrocks/be-ubuntu:3.5-latest
+  image: starrocks/cn-ubuntu:3.5-latest
   restart: unless-stopped
-  command: /opt/starrocks/be_entrypoint.sh leader
+  command: /opt/starrocks/cn_entrypoint.sh leader
   environment:
     HOST_TYPE: FQDN
   ulimits:
@@ -135,47 +135,47 @@ services:
     volumes:
       - .data/starrocks-follower-3:/opt/starrocks/fe/meta:Z
 
-  starrocks-be-1:
+  starrocks-cn-1:
     <<: *backend-common
-    container_name: starrocks-be-1
-    hostname: be-1
+    container_name: starrocks-cn-1
+    hostname: cn-1
     volumes:
-      - .data/starrocks-be-1:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-1:/opt/starrocks/cn/storage:Z
 
-  starrocks-be-2:
+  starrocks-cn-2:
     <<: *backend-common
-    container_name: starrocks-be-2
-    hostname: be-2
+    container_name: starrocks-cn-2
+    hostname: cn-2
     volumes:
-      - .data/starrocks-be-2:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-2:/opt/starrocks/cn/storage:Z
 
-  starrocks-be-3:
+  starrocks-cn-3:
     <<: *backend-common
-    container_name: starrocks-be-3
-    hostname: be-3
+    container_name: starrocks-cn-3
+    hostname: cn-3
     volumes:
-      - .data/starrocks-be-3:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-3:/opt/starrocks/cn/storage:Z
 
-  starrocks-be-4:
+  starrocks-cn-4:
     <<: *backend-common
-    container_name: starrocks-be-4
-    hostname: be-4
+    container_name: starrocks-cn-4
+    hostname: cn-4
     volumes:
-      - .data/starrocks-be-4:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-4:/opt/starrocks/cn/storage:Z
 
-  starrocks-be-5:
+  starrocks-cn-5:
     <<: *backend-common
-    container_name: starrocks-be-5
-    hostname: be-5
+    container_name: starrocks-cn-5
+    hostname: cn-5
     volumes:
-      - .data/starrocks-be-5:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-5:/opt/starrocks/cn/storage:Z
 
-  starrocks-be-6:
+  starrocks-cn-6:
     <<: *backend-common
-    container_name: starrocks-be-6
-    hostname: be-6
+    container_name: starrocks-cn-6
+    hostname: cn-6
     volumes:
-      - .data/starrocks-be-6:/opt/starrocks/be/storage:Z
+      - .data/starrocks-cn-6:/opt/starrocks/cn/storage:Z
 
   minio_mc:
     # This service is short lived, it does this:

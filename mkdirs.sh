@@ -18,23 +18,23 @@ sudo chown 1000:1000 -R .data/starrocks-follower-2
 mkdir -p .data/starrocks-follower-3
 sudo chown 1000:1000 -R .data/starrocks-follower-3
 
-mkdir -p .data/starrocks-be-1
-sudo chown 1000:1000 -R .data/starrocks-be-1
+mkdir -p .data/starrocks-cn-1
+sudo chown 0:0 -R .data/starrocks-cn-1
 
-mkdir -p .data/starrocks-be-2
-sudo chown 1000:1000 -R .data/starrocks-be-2
+mkdir -p .data/starrocks-cn-2
+sudo chown 0:0 -R .data/starrocks-cn-2
 
-mkdir -p .data/starrocks-be-3
-sudo chown 1000:1000 -R .data/starrocks-be-3
+mkdir -p .data/starrocks-cn-3
+sudo chown 0:0 -R .data/starrocks-cn-3
 
-mkdir -p .data/starrocks-be-4
-sudo chown 1000:1000 -R .data/starrocks-be-4
+mkdir -p .data/starrocks-cn-4
+sudo chown 0:0 -R .data/starrocks-cn-4
 
-mkdir -p .data/starrocks-be-5
-sudo chown 1000:1000 -R .data/starrocks-be-5
+mkdir -p .data/starrocks-cn-5
+sudo chown 0:0 -R .data/starrocks-cn-5
 
-mkdir -p .data/starrocks-be-6
-sudo chown 1000:1000 -R .data/starrocks-be-6
+mkdir -p .data/starrocks-cn-6
+sudo chown 0:0 -R .data/starrocks-cn-6
 
 mkdir -p .data/minio1-1
 sudo chown 0:0 -R .data/minio1-1
