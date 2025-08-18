@@ -1,0 +1,277 @@
+x-frontend-common: &frontend-common
+  image: starrocks/fe-ubuntu:3.5-latest
+  restart: unless-stopped
+  command:
+    - /bin/bash
+    - -c
+    - |
+      echo "# enable shared data, set storage type, set endpoint" >> /opt/starrocks/fe/conf/fe.conf
+      echo "run_mode = shared_data" >> /opt/starrocks/fe/conf/fe.conf
+      echo "cloud_native_storage_type = S3" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_endpoint = minio:9000" >> /opt/starrocks/fe/conf/fe.conf
+
+      echo "# set the path in MinIO" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_path = starrocks" >> /opt/starrocks/fe/conf/fe.conf
+
+      echo "# credentials for MinIO object read/write" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_access_key = ${MINIO_ACCESS_KEY}" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_secret_key = ${MINIO_SECRET_KEY}" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_use_instance_profile = false" >> /opt/starrocks/fe/conf/fe.conf
+      echo "aws_s3_use_aws_sdk_default_behavior = false" >> /opt/starrocks/fe/conf/fe.conf
+
+      echo "# Set this to false if you do not want default" >> /opt/starrocks/fe/conf/fe.conf
+      echo "# storage created in the object storage using" >> /opt/starrocks/fe/conf/fe.conf
+      echo "# the details provided above" >> /opt/starrocks/fe/conf/fe.conf
+      echo "enable_load_volume_from_conf = true" >> /opt/starrocks/fe/conf/fe.conf
+
+      /opt/starrocks/fe_entrypoint.sh leader
+  environment:
+    HOST_TYPE: FQDN
+    FE_LEADER: leader
+  healthcheck:
+    test: curl -f -s -o /dev/null -w '%{http_code}' http://localhost:8030 | grep 401
+    interval: 60s
+    timeout: 1s
+    retries: 3
+    start_period: 1s
+    start_interval: 1s
+  depends_on:
+    minio:
+      condition: service_healthy
+
+x-backend-common: &backend-common
+  image: starrocks/be-ubuntu:3.5-latest
+  restart: unless-stopped
+  command: /opt/starrocks/be_entrypoint.sh leader
+  environment:
+    HOST_TYPE: FQDN
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 655350
+      hard: 655350
+  healthcheck:
+    test: curl -o /dev/null http://localhost:8060/health
+    interval: 60s
+    timeout: 1s
+    retries: 3
+    start_period: 1s
+    start_interval: 1s
+  depends_on:
+    starrocks-leader:
+      condition: service_healthy
+    minio:
+      condition: service_healthy
+
+x-minio-common: &minio-common
+  image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
+  restart: unless-stopped
+  command: server --console-address ":9001" http://minio{1...5}/data{1...4}
+  environment:
+    MINIO_ROOT_USER: ${MINIO_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+  healthcheck:
+    test: curl -f http://localhost:9000/minio/health/live
+    interval: 60s
+    timeout: 1s
+    retries: 3
+    start_period: 1s
+    start_interval: 1s
+
+services:
+  haproxy:
+    image: docker.io/library/haproxy:3.2
+    container_name: haproxy
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - 9080:9080/tcp # status
+      - 8030:8030/tcp # StarRocks HTTP
+      - 9030:9030/tcp # StarRocks Query
+    healthcheck:
+      test: timeout 1 bash -c '</dev/tcp/localhost/9080' || exit 1
+      interval: 60s
+      timeout: 1s
+      retries: 3
+      start_period: 1s
+      start_interval: 1s
+    depends_on:
+      starrocks-leader:
+        condition: service_healthy
+      starrocks-follower-1:
+        condition: service_healthy
+      starrocks-follower-2:
+        condition: service_healthy
+      starrocks-follower-3:
+        condition: service_healthy
+
+  starrocks-leader:
+    <<: *frontend-common
+    container_name: starrocks-leader
+    hostname: leader
+    volumes:
+      - .data/starrocks-leader:/opt/starrocks/fe/meta:Z
+
+  starrocks-follower-1:
+    <<: *frontend-common
+    container_name: starrocks-follower-1
+    hostname: follower-1
+    volumes:
+      - .data/starrocks-follower-1:/opt/starrocks/fe/meta:Z
+
+  starrocks-follower-2:
+    <<: *frontend-common
+    container_name: starrocks-follower-2
+    hostname: follower-2
+    volumes:
+      - .data/starrocks-follower-2:/opt/starrocks/fe/meta:Z
+
+  starrocks-follower-3:
+    <<: *frontend-common
+    container_name: starrocks-follower-3
+    hostname: follower-3
+    volumes:
+      - .data/starrocks-follower-3:/opt/starrocks/fe/meta:Z
+
+  starrocks-be-1:
+    <<: *backend-common
+    container_name: starrocks-be-1
+    hostname: be-1
+    volumes:
+      - .data/starrocks-be-1:/opt/starrocks/be/storage:Z
+
+  starrocks-be-2:
+    <<: *backend-common
+    container_name: starrocks-be-2
+    hostname: be-2
+    volumes:
+      - .data/starrocks-be-2:/opt/starrocks/be/storage:Z
+
+  starrocks-be-3:
+    <<: *backend-common
+    container_name: starrocks-be-3
+    hostname: be-3
+    volumes:
+      - .data/starrocks-be-3:/opt/starrocks/be/storage:Z
+
+  starrocks-be-4:
+    <<: *backend-common
+    container_name: starrocks-be-4
+    hostname: be-4
+    volumes:
+      - .data/starrocks-be-4:/opt/starrocks/be/storage:Z
+
+  starrocks-be-5:
+    <<: *backend-common
+    container_name: starrocks-be-5
+    hostname: be-5
+    volumes:
+      - .data/starrocks-be-5:/opt/starrocks/be/storage:Z
+
+  starrocks-be-6:
+    <<: *backend-common
+    container_name: starrocks-be-6
+    hostname: be-6
+    volumes:
+      - .data/starrocks-be-6:/opt/starrocks/be/storage:Z
+
+  minio_mc:
+    # This service is short lived, it does this:
+    # - starts up
+    # - checks to see if the MinIO service `minio` is ready
+    # - creates a MinIO Access Key that the StarRocks services will use
+    # - exits
+    image: quay.io/minio/mc:RELEASE.2025-07-21T05-28-08Z
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until mc ls minio > /dev/null 2>&1; do
+          sleep 0.5
+        done
+
+        mc alias set myminio http://minio:9000 ${MINIO_USER} ${MINIO_PASSWORD}
+        mc admin user svcacct add \
+        --access-key ${MINIO_ACCESS_KEY} \
+        --secret-key ${MINIO_SECRET_KEY} \
+        myminio ${MINIO_USER}
+        mc mb -p myminio/starrocks
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  minio:
+    image: docker.io/library/haproxy:3.2
+    restart: unless-stopped
+    container_name: starrocks-minio
+    read_only: true
+    volumes:
+      - ./haproxy-minio/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - 9000:9000/tcp
+      - 9001:9001/tcp
+    healthcheck:
+      test: timeout 1 bash -c '</dev/tcp/localhost/9080' || exit 1
+      interval: 60s
+      timeout: 1s
+      retries: 3
+      start_period: 1s
+      start_interval: 1s
+    depends_on:
+      minio1:
+        condition: service_healthy
+      minio2:
+        condition: service_healthy
+      minio3:
+        condition: service_healthy
+      minio4:
+        condition: service_healthy
+      minio5:
+        condition: service_healthy
+
+  minio1:
+    <<: *minio-common
+    container_name: starrocks-minio1
+    volumes:
+      - .data/minio1-1:/data1
+      - .data/minio1-2:/data2
+      - .data/minio1-3:/data3
+      - .data/minio1-4:/data4
+
+  minio2:
+    <<: *minio-common
+    container_name: starrocks-minio2
+    volumes:
+      - .data/minio2-1:/data1
+      - .data/minio2-2:/data2
+      - .data/minio2-3:/data3
+      - .data/minio2-4:/data4
+
+  minio3:
+    <<: *minio-common
+    container_name: starrocks-minio3
+    volumes:
+      - .data/minio3-1:/data1
+      - .data/minio3-2:/data2
+      - .data/minio3-3:/data3
+      - .data/minio3-4:/data4
+
+  minio4:
+    <<: *minio-common
+    container_name: starrocks-minio4
+    volumes:
+      - .data/minio4-1:/data1
+      - .data/minio4-2:/data2
+      - .data/minio4-3:/data3
+      - .data/minio4-4:/data4
+
+  minio5:
+    <<: *minio-common
+    container_name: starrocks-minio5
+    volumes:
+      - .data/minio5-1:/data1
+      - .data/minio5-2:/data2
+      - .data/minio5-3:/data3
+      - .data/minio5-4:/data4
