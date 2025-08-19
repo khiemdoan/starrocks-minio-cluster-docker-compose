@@ -1,6 +1,7 @@
 x-frontend-common: &frontend-common
   image: starrocks/fe-ubuntu:3.5-latest
   restart: unless-stopped
+  user: 1000:1000
   command:
     - /bin/bash
     - -c
@@ -36,13 +37,26 @@ x-frontend-common: &frontend-common
     start_period: 1s
     start_interval: 1s
   depends_on:
+    starrocks-cn-1:
+      condition: service_healthy
+    starrocks-cn-2:
+      condition: service_healthy
+    starrocks-cn-3:
+      condition: service_healthy
+    starrocks-cn-4:
+      condition: service_healthy
+    starrocks-cn-5:
+      condition: service_healthy
+    starrocks-cn-6:
+      condition: service_healthy
     minio:
       condition: service_healthy
 
-x-backend-common: &backend-common
+x-compute-common: &compute-common
   image: starrocks/cn-ubuntu:3.5-latest
   restart: unless-stopped
-  command: /opt/starrocks/cn_entrypoint.sh leader
+  user: 1000:1000
+  command: /opt/starrocks/cn/bin/start_cn.sh
   environment:
     HOST_TYPE: FQDN
   ulimits:
@@ -58,14 +72,13 @@ x-backend-common: &backend-common
     start_period: 1s
     start_interval: 1s
   depends_on:
-    starrocks-leader:
-      condition: service_healthy
     minio:
       condition: service_healthy
 
 x-minio-common: &minio-common
   image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
   restart: unless-stopped
+  user: 1000:1000
   command: server --console-address ":9001" http://minio{1...5}/data{1...4}
   environment:
     MINIO_ROOT_USER: ${MINIO_USER}
@@ -81,7 +94,7 @@ x-minio-common: &minio-common
 services:
   haproxy:
     image: docker.io/library/haproxy:3.2
-    container_name: haproxy
+    container_name: starrocks-haproxy
     restart: unless-stopped
     read_only: true
     volumes:
@@ -136,42 +149,42 @@ services:
       - .data/starrocks-follower-3:/opt/starrocks/fe/meta:Z
 
   starrocks-cn-1:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-1
     hostname: cn-1
     volumes:
       - .data/starrocks-cn-1:/opt/starrocks/cn/storage:Z
 
   starrocks-cn-2:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-2
     hostname: cn-2
     volumes:
       - .data/starrocks-cn-2:/opt/starrocks/cn/storage:Z
 
   starrocks-cn-3:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-3
     hostname: cn-3
     volumes:
       - .data/starrocks-cn-3:/opt/starrocks/cn/storage:Z
 
   starrocks-cn-4:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-4
     hostname: cn-4
     volumes:
       - .data/starrocks-cn-4:/opt/starrocks/cn/storage:Z
 
   starrocks-cn-5:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-5
     hostname: cn-5
     volumes:
       - .data/starrocks-cn-5:/opt/starrocks/cn/storage:Z
 
   starrocks-cn-6:
-    <<: *backend-common
+    <<: *compute-common
     container_name: starrocks-cn-6
     hostname: cn-6
     volumes:
