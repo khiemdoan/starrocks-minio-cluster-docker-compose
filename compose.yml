@@ -71,15 +71,12 @@ x-compute-common: &compute-common
     retries: 3
     start_period: 1s
     start_interval: 1s
-  depends_on:
-    minio:
-      condition: service_healthy
 
 x-minio-common: &minio-common
   image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
   restart: unless-stopped
   user: 1000:1000
-  command: server --console-address ":9001" http://minio{1...5}/data{1...4}
+  command: server --console-address ":9001" http://minio-{1...5}/data-{1...4}
   environment:
     MINIO_ROOT_USER: ${MINIO_USER}
     MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
@@ -125,28 +122,28 @@ services:
     container_name: starrocks-leader
     hostname: leader
     volumes:
-      - .data/starrocks-leader:/opt/starrocks/fe/meta:Z
+      - .data/starrocks-fe-1:/opt/starrocks/fe/meta:Z
 
   starrocks-follower-1:
     <<: *frontend-common
     container_name: starrocks-follower-1
     hostname: follower-1
     volumes:
-      - .data/starrocks-follower-1:/opt/starrocks/fe/meta:Z
+      - .data/starrocks-fe-2:/opt/starrocks/fe/meta:Z
 
   starrocks-follower-2:
     <<: *frontend-common
     container_name: starrocks-follower-2
     hostname: follower-2
     volumes:
-      - .data/starrocks-follower-2:/opt/starrocks/fe/meta:Z
+      - .data/starrocks-fe-3:/opt/starrocks/fe/meta:Z
 
   starrocks-follower-3:
     <<: *frontend-common
     container_name: starrocks-follower-3
     hostname: follower-3
     volumes:
-      - .data/starrocks-follower-3:/opt/starrocks/fe/meta:Z
+      - .data/starrocks-fe-4:/opt/starrocks/fe/meta:Z
 
   starrocks-cn-1:
     <<: *compute-common
@@ -202,6 +199,7 @@ services:
       - -c
       - |
         until mc ls minio > /dev/null 2>&1; do
+          echo "Waiting for MinIO to be ready..."
           sleep 0.5
         done
 
@@ -233,58 +231,58 @@ services:
       start_period: 1s
       start_interval: 1s
     depends_on:
-      minio1:
+      minio-1:
         condition: service_healthy
-      minio2:
+      minio-2:
         condition: service_healthy
-      minio3:
+      minio-3:
         condition: service_healthy
-      minio4:
+      minio-4:
         condition: service_healthy
-      minio5:
+      minio-5:
         condition: service_healthy
 
-  minio1:
+  minio-1:
     <<: *minio-common
-    container_name: starrocks-minio1
+    container_name: starrocks-minio-1
     volumes:
-      - .data/minio1-1:/data1
-      - .data/minio1-2:/data2
-      - .data/minio1-3:/data3
-      - .data/minio1-4:/data4
+      - .data/minio-1-1:/data-1
+      - .data/minio-1-2:/data-2
+      - .data/minio-1-3:/data-3
+      - .data/minio-1-4:/data-4
 
-  minio2:
+  minio-2:
     <<: *minio-common
-    container_name: starrocks-minio2
+    container_name: starrocks-minio-2
     volumes:
-      - .data/minio2-1:/data1
-      - .data/minio2-2:/data2
-      - .data/minio2-3:/data3
-      - .data/minio2-4:/data4
+      - .data/minio-2-1:/data-1
+      - .data/minio-2-2:/data-2
+      - .data/minio-2-3:/data-3
+      - .data/minio-2-4:/data-4
 
-  minio3:
+  minio-3:
     <<: *minio-common
-    container_name: starrocks-minio3
+    container_name: starrocks-minio-3
     volumes:
-      - .data/minio3-1:/data1
-      - .data/minio3-2:/data2
-      - .data/minio3-3:/data3
-      - .data/minio3-4:/data4
+      - .data/minio-3-1:/data-1
+      - .data/minio-3-2:/data-2
+      - .data/minio-3-3:/data-3
+      - .data/minio-3-4:/data-4
 
-  minio4:
+  minio-4:
     <<: *minio-common
-    container_name: starrocks-minio4
+    container_name: starrocks-minio-4
     volumes:
-      - .data/minio4-1:/data1
-      - .data/minio4-2:/data2
-      - .data/minio4-3:/data3
-      - .data/minio4-4:/data4
+      - .data/minio-4-1:/data-1
+      - .data/minio-4-2:/data-2
+      - .data/minio-4-3:/data-3
+      - .data/minio-4-4:/data-4
 
-  minio5:
+  minio-5:
     <<: *minio-common
-    container_name: starrocks-minio5
+    container_name: starrocks-minio-5
     volumes:
-      - .data/minio5-1:/data1
-      - .data/minio5-2:/data2
-      - .data/minio5-3:/data3
-      - .data/minio5-4:/data4
+      - .data/minio-5-1:/data-1
+      - .data/minio-5-2:/data-2
+      - .data/minio-5-3:/data-3
+      - .data/minio-5-4:/data-4
