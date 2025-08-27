@@ -36,6 +36,10 @@ sudo chown 1000:1000 -R .data/starrocks-cn-5
 mkdir -p .data/starrocks-cn-6
 sudo chown 1000:1000 -R .data/starrocks-cn-6
 
+# Postgres directory
+mkdir -p .data/postgres
+sudo chown 999:999 -R .data/postgres
+
 mkdir -p .data/minio-1-1
 sudo chown 1000:1000 -R .data/minio-1-1
 
