@@ -98,7 +98,8 @@ services:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
       - 9080:9080/tcp # status
-      - 8030:8030/tcp # StarRocks HTTP
+      - 8030:8030/tcp # StarRocks FE HTTP
+      - 8040:8040/tcp # StarRocks CN HTTP
       - 9030:9030/tcp # StarRocks Query
     healthcheck:
       test: timeout 1 bash -c '</dev/tcp/localhost/9080' || exit 1
